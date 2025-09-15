@@ -1,4 +1,6 @@
-from chat import ChatApp
+import sys
+sys.path.append("./interface")
+from interface.chat import ChatApp
 import flet as ft
 from flet import Page, MainAxisAlignment, CrossAxisAlignment
 
