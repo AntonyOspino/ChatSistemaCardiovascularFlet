@@ -1,6 +1,5 @@
 import flet as ft
 import darkdetect
-import time
 import asyncio
 from flet import Page, MainAxisAlignment, CrossAxisAlignment, ImageFit, Colors
 import sys
