@@ -33,16 +33,19 @@ class ChatArea:
                 font_family="Arial", 
                 no_wrap=False, 
                 max_lines=None, 
-                overflow=TextOverflow.VISIBLE
+                overflow=TextOverflow.VISIBLE,
+                width=None
             ),
-            padding=10,
+            padding=ft.padding.symmetric(horizontal=15, vertical=10),
             bgcolor=bubble_color,
             border_radius=15,
             alignment=alignment,
-            # ⬇️ LIMITAR EL ANCHO MÁXIMO - clave para el salto de línea
-            width=400,  # Ancho máximo fijo
-            # O usar constraints para ser más flexible:
-            # constraints=ft.BoxConstraints(max_width=400),
+            # ⬇️ ELIMINAR el width fijo y usar constraints flexibles
+            margin=ft.margin.symmetric(vertical=5),
+            # Ancho máximo del 80% del contenedor para no ocupar toda la pantalla
+            #constraints=ft.BoxConstraints(max_width=500),
+            # O usar porcentaje del ancho disponible:
+            width=ft.BoxConstraints(max_width=0.8 * 500)
         )
 
         # Fila que controla la alineación (izquierda o derecha)
