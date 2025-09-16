@@ -1,5 +1,5 @@
 import flet as ft
-from flet import Column, Row, TextField, ElevatedButton, ListView, Container, Text, Icons, MainAxisAlignment, TextOverflow
+from flet import Column, Row, TextField, ElevatedButton, ListView, Container, Text, Icons, MainAxisAlignment, TextOverflow, BoxConstraints, padding, margin
 
 class ChatArea:
     """Componente reutilizable para el área de chat (mensajes, campo de entrada y botón)."""
@@ -36,16 +36,12 @@ class ChatArea:
                 overflow=TextOverflow.VISIBLE,
                 width=None
             ),
-            padding=ft.padding.symmetric(horizontal=15, vertical=10),
+            padding=padding.symmetric(horizontal=15, vertical=10),
             bgcolor=bubble_color,
             border_radius=15,
             alignment=alignment,
-            # ⬇️ ELIMINAR el width fijo y usar constraints flexibles
-            margin=ft.margin.symmetric(vertical=5),
-            # Ancho máximo del 80% del contenedor para no ocupar toda la pantalla
-            #constraints=ft.BoxConstraints(max_width=500),
-            # O usar porcentaje del ancho disponible:
-            width=ft.BoxConstraints(max_width=0.8 * 500)
+            margin=margin.symmetric(vertical=5),
+            width=BoxConstraints(max_width=0.8 * 500)
         )
 
         # Fila que controla la alineación (izquierda o derecha)
