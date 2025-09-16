@@ -30,11 +30,7 @@ class ChatApp:
             "text": "#E0E0E0",  # Texto claro
             "neutral": "#2F2F2F"  # Fondo neutro oscuro
         }
-        self.chat_area = ChatArea(self.send_message, self.get_current_theme())
-        # Añadimos el componente de chat a la página
-        self.page.add(self.chat_area.container)
-        self.chat_area.focus_input()
-        self.page.on_keyboard_event = self.handle_keyboard_event
+
         # Botón para alternar tema
         self.theme_switch = ft.IconButton(
             icon=Icons.BRIGHTNESS_4,
@@ -42,9 +38,46 @@ class ChatApp:
             tooltip="Cambiar tema",
             icon_color=self.get_current_theme()["primary"]
         )
-        self.page.add(ft.Row([self.theme_switch], alignment=MainAxisAlignment.START, vertical_alignment=CrossAxisAlignment.START))
-         # Mensaje de bienvenida
-        self.chat_area.add_message("¡Hola! Por favor, ingresa tu usuario y contraseña para continuar.", False, self.get_current_theme())
+
+        # Encabezado con icono + título
+        self.header = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(
+                        src="assets/heart-beat.png",
+                        width=40,
+                        height=40,
+                        fit=ft.ImageFit.CONTAIN
+                    ),
+                    ft.Text("Sistema Cardiovascular", size=22, weight="bold", color=self.get_current_theme()["text"]),
+                    self.theme_switch
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            ),
+            padding=10,
+            bgcolor=self.get_current_theme()["neutral"],
+            border_radius=10,
+            margin=ft.margin.symmetric(horizontal=10, vertical=5)
+        )
+
+        
+        # Agregamos encabezado + área de chat
+        self.page.add(self.header)
+
+        self.chat_area = ChatArea(self.send_message, self.get_current_theme())
+
+        #self.page.add(ft.Row([self.theme_switch], alignment=ft.MainAxisAlignment.END, vertical_alignment=ft.CrossAxisAlignment.START))
+
+        # Añadimos el componente de chat a la página
+        self.page.add(self.chat_area.container)
+        self.chat_area.focus_input()
+        self.page.on_keyboard_event = self.handle_keyboard_event
+
+        
+        # Mensaje de bienvenida
+        self.chat_area.add_message("¡Hola! Por favor, ingresa tu usuario y contraseña para continuar.", 
+            False, 
+            self.get_current_theme())
         self.apply_theme(is_light_theme)
         self.page.update()
 
