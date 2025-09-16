@@ -6,7 +6,15 @@ class ChatArea:
     def __init__(self, on_send_message, theme):
         self.messages = ListView(expand=True, spacing=10, padding=20, auto_scroll=True)
         self.input_field = TextField(hint_text="Escribe un mensaje...", expand=True, bgcolor=theme["neutral"], color=theme["text"])
-        self.send_button = ElevatedButton(text="Enviar", icon=Icons.SEND, on_click=on_send_message, bgcolor=theme["primary"], color="white")
+        self.send_button = ElevatedButton(text="Enviar", icon=Icons.ARROW_FORWARD, on_click=on_send_message,
+        bgcolor="#1E90FF",
+        color="white",
+        
+        style=ft.ButtonStyle(
+            shape=ft.RoundedRectangleBorder(radius=10),
+            padding=20,
+            elevation=5
+        ))
         
         self.container = Column(
             controls=[
@@ -14,7 +22,7 @@ class ChatArea:
                 Row(
                     [self.input_field, self.send_button],
                     alignment=MainAxisAlignment.CENTER,
-                    spacing=10,
+                    spacing=12,
                 ),
             ],
             expand=True,
@@ -30,7 +38,7 @@ class ChatArea:
             content=Text(
                 value=message, 
                 color="white", 
-                font_family="Arial", 
+                font_family="Courier New", 
                 no_wrap=False, 
                 max_lines=None, 
                 overflow=TextOverflow.VISIBLE,
@@ -38,7 +46,7 @@ class ChatArea:
             ),
             padding=padding.symmetric(horizontal=15, vertical=10),
             bgcolor=bubble_color,
-            border_radius=15,
+            border_radius=10,
             alignment=alignment,
             margin=margin.symmetric(vertical=5),
             width=BoxConstraints(max_width=0.8 * 500)
@@ -70,7 +78,7 @@ class ChatArea:
         """Actualiza los colores del ChatArea según el tema."""
         self.input_field.bgcolor = theme["neutral"]
         self.input_field.color = theme["text"]
-        self.send_button.bgcolor = theme["primary"]
+        #self.send_button.bgcolor = theme["primary"]
         
         # Actualizar colores de los mensajes existentes
         for row in self.messages.controls:
