@@ -21,9 +21,15 @@ class ChatContext:
             if not silent and not was_silent:
                 self.chat_app.context.show_welcome_message()
         else:
-            self.chat_app.context = InitialContext(self.chat_app)
-            if not silent:
-                self.chat_app.context.show_welcome_message()
+            self.reset_to_login()
+
+    def reset_to_login(self, clear_chat=True):
+        """Reinicia la aplicación al estado inicial de login."""
+        if clear_chat:
+            self.chat_app.chat_area.messages.controls.clear()
+        self.chat_app.context_stack.clear()
+        self.chat_app.context = InitialContext(self.chat_app)
+        self.chat_app.context.show_welcome_message()
 
     def show_welcome_message(self):
         """Muestra el mensaje de bienvenida del contexto (opcional para cada contexto)."""
@@ -31,6 +37,9 @@ class ChatContext:
 
 # Contextos específicos
 class InitialContext(ChatContext):
+    def show_welcome_message(self):
+        self.chat_app.chat_area.add_message("¡Hola! Por favor, ingresa tu usuario y contraseña para continuar.", False, self.chat_app.get_current_theme())
+    
     def handle_message(self, message):
         if "usuario" in message and "contraseña" in message:
             self.push_context(LoginOptionsContext)
@@ -128,12 +137,13 @@ class AddNoteContext(ChatContext):
         else:
             self.chat_app.chat_area.add_message("Nota no ingresada. Por favor, ingresa una nota.", False, self.chat_app.get_current_theme())
 
+# Contextos específicos (modificados)
 class ExitPromptContext(ChatContext):
     def handle_message(self, message):
         match message.lower():
             case "sí" | "si" | "s":
-                self.chat_app.chat_area.add_message("Cerrando la aplicación.", False, self.chat_app.get_current_theme())
-                self.chat_app.page.window.close()
+                self.chat_app.chat_area.add_message("Cerrando sesión...", False, self.chat_app.get_current_theme())
+                self.reset_to_login()
             case "no" | "n":
                 self.pop_context()
             case _:
@@ -141,13 +151,13 @@ class ExitPromptContext(ChatContext):
 
 class ExitConfirmContext(ChatContext):
     def show_welcome_message(self):
-        self.chat_app.chat_area.add_message("Confirmación de salida solicitada. ¿Estás seguro? (Sí/No)", False, self.chat_app.get_current_theme())
+        self.chat_app.chat_area.add_message("Confirmación de salida solicitada. ¿Estás seguro que deseas cerrar sesión? (Sí/No)", False, self.chat_app.get_current_theme())
     
     def handle_message(self, message):
         match message.lower():
             case "sí" | "si" | "s" | "yes" | "y":
-                self.chat_app.chat_area.add_message("Cerrando la aplicación.", False, self.chat_app.get_current_theme())
-                self.chat_app.page.window.close()
+                self.chat_app.chat_area.add_message("Cerrando sesión...", False, self.chat_app.get_current_theme())
+                self.reset_to_login()
             case "no" | "n":
                 self.pop_context()
             case _:
@@ -159,7 +169,7 @@ class ReturnPromptContext(ChatContext):
             case "sí" | "si" | "s":
                 self.pop_context()
             case "no" | "n":
-                self.chat_app.chat_area.add_message("Cerrando la aplicación.", False, self.chat_app.get_current_theme())
-                self.chat_app.page.window.close()
+                self.chat_app.chat_area.add_message("Cerrando sesión...", False, self.chat_app.get_current_theme())
+                self.reset_to_login()
             case _:
                 self.chat_app.chat_area.add_message("Opción no válida. Por favor, responde Sí o No.", False, self.chat_app.get_current_theme())
