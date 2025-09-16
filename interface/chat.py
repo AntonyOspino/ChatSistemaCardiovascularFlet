@@ -84,7 +84,6 @@ class ChatApp:
             "neutral": "#2F2F2F"  # Fondo neutro oscuro
         }
         self.chat_area = ChatArea(self.send_message, self.get_current_theme())
-        self.apply_theme(is_light_theme)
         # Añadimos el componente de chat a la página
         self.page.add(self.chat_area.container)
         self.chat_area.focus_input()
@@ -99,6 +98,7 @@ class ChatApp:
         self.page.add(ft.Row([self.theme_switch], alignment=MainAxisAlignment.START, vertical_alignment=CrossAxisAlignment.START))
          # Mensaje de bienvenida
         self.chat_area.add_message("¡Hola! Por favor, ingresa tu usuario y contraseña para continuar.", False, self.get_current_theme())
+        self.apply_theme(is_light_theme)
         self.page.update()
 
     def push_context(self, new_context: str):
@@ -239,7 +239,7 @@ class ChatApp:
     def apply_theme(self, is_light_theme: bool):
         theme = self.LIGHT_THEME if is_light_theme else self.DARK_THEME
         self.page.bgcolor = theme["bg"]
-        self.chat_area.input_field.color = theme["text"]
+        self.chat_area.update_theme(theme)
         self.page.update()
 
     def toggle_theme(self, e):
