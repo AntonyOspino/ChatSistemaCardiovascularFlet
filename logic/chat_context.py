@@ -88,7 +88,7 @@ class DiagnosisMenuContext(ChatContext):
                 self.chat_app.chat_area.add_message("Simulación: Ritmo cardíaco: 72 bpm (Normal). ¿Continuar? (Sí/No)", False, self.chat_app.get_current_theme())
                 self.push_context(DiagnosisResultContext, silent=True)
             case "c" | "volver" | "atrás" | "atras":
-                self.pop_context(silent=True)
+                self.pop_context(silent=False)
             case _:
                 self.chat_app.chat_area.add_message("Opción no válida. Elige: a) Medir presión, b) Evaluar ritmo, c) Volver", False, self.chat_app.get_current_theme())
 
@@ -104,7 +104,7 @@ class HistoryMenuContext(ChatContext):
             case "b" | "agregar nota" | "nota":
                 self.push_context(AddNoteContext)
             case "c" | "volver" | "atrás" | "atras":
-                self.pop_context(silent=True)
+                self.pop_context(silent=False)
             case _:
                 self.chat_app.chat_area.add_message("Opción no válida. Elige: a) Ver consultas, b) Agregar nota, c) Volver", False, self.chat_app.get_current_theme())
 
