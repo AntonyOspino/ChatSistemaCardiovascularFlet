@@ -212,7 +212,7 @@ class PacienteReglasContext(ChatContext):
                 return "\n".join(lines)
             elif isinstance(diagnostico, str):
                 # Si es una cadena, reemplazar ciertos caracteres con saltos de línea
-                diagnostico_formatted = diagnostico.replace(";", "\n").replace(".", "\n").replace("-", "\n").replace(" ", "\n")
+                diagnostico_formatted = diagnostico.replace(";", "\n").replace(".", "\n").replace("-", "\n").replace(" ", "\n").replace(",", "\n")
                 # Elimina espacios en blanco adicionales y líneas vacías consecutivas
                 lines = [line.strip() for line in diagnostico_formatted.split("\n") if line.strip()]
                 return "\n".join(lines)

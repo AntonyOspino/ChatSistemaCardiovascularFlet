@@ -121,7 +121,7 @@ class InitialContext(ChatContext):
                     return
                 await self.push_context(LoginOptionsContext)
             else:
-                error_msg = login_result.get("error", "Usuario y/o contraseña no válidos. Intenta de nuevo.") if isinstance(login_result, dict) else "Error desconocido al iniciar sesión."
+                error_msg = login_result.get("message", "Usuario y/o contraseña no válidos. Intenta de nuevo.") if isinstance(login_result, dict) else "Error desconocido al iniciar sesión."
                 try:
                     self.chat_app.chat_area.add_message(error_msg, False, self.chat_app.get_current_theme())
                 except Exception as e:
