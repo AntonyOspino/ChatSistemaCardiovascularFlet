@@ -32,3 +32,12 @@ async def fetch_questions():
         return {"message": f"Error: {str(e)}"}
     return None
 
+async def send_data_fetch(data: dict):
+    url = f"{API_BASE_URL}/respuesta/addWithoutSaving"
+    try:
+        response = await client.post(url, json=data)
+        if response and response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
+

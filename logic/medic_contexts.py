@@ -1,4 +1,5 @@
 import asyncio
+from logic.request_Functions import fetch_questions, send_data_fetch
 from chat_context import ChatContext
 
 class MedicoMainMenuContext(ChatContext):
@@ -49,23 +50,67 @@ class MedicoMainMenuContext(ChatContext):
                     print(f"DEBUG -> Traceback: {traceback.format_exc()}")
 
 class MedicoReglasContext(ChatContext):
-    def show_welcome_message(self):
+    async def show_welcome_message(self):
         try:
-            self.chat_app.chat_area.add_message("Sistema de reglas para médico. Responde las preguntas para diagnóstico:", False, self.chat_app.get_current_theme())
-            self.chat_app.chat_area.add_message("1. ¿El paciente tiene fiebre? (Sí/No)", False, self.chat_app.get_current_theme())
-            self.chat_app.reglas_respuestas = []
-            print("DEBUG -> Mensaje de bienvenida mostrado en MedicoReglasContext")
+            questions = await fetch_questions()
+            print(f"DEBUG -> Respuesta de fetch_questions: {repr(questions)}")
         except Exception as e:
-            print(f"ERROR -> Error al mostrar mensaje de bienvenida en MedicoReglasContext: {str(e)}")
+            print(f"ERROR -> Error en fetch_questions: {str(e)}")
             import traceback
             print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            self.chat_app.chat_area.add_message(f"Error al obtener preguntas: {str(e)}", False, self.chat_app.get_current_theme())
+            self.pop_context()
+            return
+        
+        # Verificar la estructura de questions
+        if not isinstance(questions, dict) or "data" not in questions:
+            error_msg = "Formato de respuesta inesperado de la API de preguntas."
+            print(f"DEBUG -> Error en preguntas: {error_msg}")
+            self.chat_app.chat_area.add_message(error_msg, False, self.chat_app.get_current_theme())
+            self.pop_context()
+            return
+        
+        questions_data = questions.get("data", [])
+        if not questions_data:
+            error_msg = "No se encontraron preguntas en la respuesta de la API."
+            print(f"DEBUG -> Error en preguntas: {error_msg}")
+            self.chat_app.chat_area.add_message(error_msg, False, self.chat_app.get_current_theme())
+            self.pop_context()
+            return
+        
+        self.chat_app.questions = questions_data
+        self.chat_app.reglas_respuestas = []
+        
+        try:
+            print("DEBUG -> Agregando mensaje de bienvenida")
+            self.chat_app.chat_area.add_message("Sistema de reglas activado. Responde las siguientes preguntas sobre el paciente para el diagnóstico:", False, self.chat_app.get_current_theme())
+            print("DEBUG -> Verificando primera pregunta")
+            first_question = questions_data[0]["pregunta"] + " (Sí/No)"
+            print(f"DEBUG -> Primera pregunta: {first_question}")
+            self.chat_app.chat_area.add_message(f"1. ¿El paciente presenta {first_question.lower().replace('¿', '').replace('? (sí/no)', '')}? (Sí/No)", False, self.chat_app.get_current_theme())
+        except Exception as e:
+            print(f"ERROR -> Error al agregar mensajes en show_welcome_message: {str(e)}")
+            import traceback
+            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            self.chat_app.chat_area.add_message(f"Error al mostrar preguntas: {str(e)}", False, self.chat_app.get_current_theme())
+            self.pop_context()
+            return
 
     async def handle_message(self, message):
         if not message.strip():
             try:
                 self.chat_app.chat_area.add_message("No puede dejar campos vacíos. Responde la pregunta.", False, self.chat_app.get_current_theme())
             except Exception as e:
-                print(f"ERROR -> Error al mostrar mensaje de error en MedicoReglasContext: {str(e)}")
+                print(f"ERROR -> Error al mostrar mensaje de campo vacío: {str(e)}")
+                import traceback
+                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            return
+        
+        if message.lower() not in ["sí", "si", "no"]:
+            try:
+                self.chat_app.chat_area.add_message("Respuesta no válida. Por favor, responde Sí o No.", False, self.chat_app.get_current_theme())
+            except Exception as e:
+                print(f"ERROR -> Error al mostrar mensaje de respuesta no válida: {str(e)}")
                 import traceback
                 print(f"DEBUG -> Traceback: {traceback.format_exc()}")
             return
@@ -74,33 +119,48 @@ class MedicoReglasContext(ChatContext):
         respuestas.append(message.lower())
         print("DEBUG -> Respuestas hasta ahora:", respuestas)
         
-        if len(respuestas) == 1:
+        questions = getattr(self.chat_app, 'questions', [])
+        
+        if len(respuestas) < len(questions):
             try:
-                self.chat_app.chat_area.add_message("2. ¿El paciente tiene tos persistente? (Sí/No)", False, self.chat_app.get_current_theme())
-                print("DEBUG -> Segunda pregunta mostrada en MedicoReglasContext")
+                next_question = questions[len(respuestas)]["pregunta"] + " (Sí/No)"
+                print(f"DEBUG -> Mostrando siguiente pregunta: {next_question}")
+                self.chat_app.chat_area.add_message(f"{len(respuestas) + 1}. ¿El paciente presenta {next_question.lower().replace('¿', '').replace('? (sí/no)', '')}? (Sí/No)", False, self.chat_app.get_current_theme())
             except Exception as e:
-                print(f"ERROR -> Error al mostrar segunda pregunta: {str(e)}")
+                print(f"ERROR -> Error al mostrar la siguiente pregunta: {str(e)}")
                 import traceback
                 print(f"DEBUG -> Traceback: {traceback.format_exc()}")
-        elif len(respuestas) == 2:
+                self.chat_app.chat_area.add_message(f"Error al mostrar la siguiente pregunta: {str(e)}", False, self.chat_app.get_current_theme())
+                self.pop_context()
+                return
+        else:
             try:
-                self.chat_app.chat_area.add_message("3. ¿El paciente tiene dificultad para respirar? (Sí/No)", False, self.chat_app.get_current_theme())
-                print("DEBUG -> Tercera pregunta mostrada en MedicoReglasContext")
+                # Preparar el cuerpo de la solicitud al endpoint
+                respuestas_formatted = [
+                    {"id_pregunta": question["id"], "respuesta_valor": respuesta in ["sí", "si"]}
+                    for question, respuesta in zip(questions, respuestas)
+                ]
+                payload = {"respuestas": respuestas_formatted}
+                print(f"DEBUG -> Payload enviado al endpoint: {payload}")
+
+                # Realizar la solicitud al endpoint usando send_data_fetch
+                result = await send_data_fetch(payload)
+                print(f"DEBUG -> Respuesta del endpoint: {result}")
+
+                if result and "diagnostico" in result:
+                    diagnostico = result["diagnostico"]
+                    diagnostico_formatted = self.format_diagnostico(diagnostico)
+                    self.chat_app.chat_area.add_message(f"Diagnóstico para el paciente:\n{diagnostico_formatted}", False, self.chat_app.get_current_theme())
+                    self.chat_app.chat_area.add_message("Información NO almacenada (solo para consulta médica).", False, self.chat_app.get_current_theme())
+                elif result and "error" in result:
+                    self.chat_app.chat_area.add_message(f"Error al obtener diagnóstico: {result['error']}", False, self.chat_app.get_current_theme())
+                else:
+                    self.chat_app.chat_area.add_message("No se pudo determinar el diagnóstico.", False, self.chat_app.get_current_theme())
             except Exception as e:
-                print(f"ERROR -> Error al mostrar tercera pregunta: {str(e)}")
+                print(f"ERROR -> Error al procesar el diagnóstico: {str(e)}")
                 import traceback
                 print(f"DEBUG -> Traceback: {traceback.format_exc()}")
-        elif len(respuestas) == 3:
-            try:
-                diagnostico = self.generar_diagnostico(respuestas)
-                diagnostico_formatted = self.format_diagnostico(diagnostico)
-                self.chat_app.chat_area.add_message(f"Diagnóstico:\n{diagnostico_formatted}", False, self.chat_app.get_current_theme())
-                self.chat_app.chat_area.add_message("Información NO almacenada (solo para consulta médica).", False, self.chat_app.get_current_theme())
-                print("DEBUG -> Diagnóstico mostrado en MedicoReglasContext")
-            except Exception as e:
-                print(f"ERROR -> Error al mostrar diagnóstico en MedicoReglasContext: {str(e)}")
-                import traceback
-                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                self.chat_app.chat_area.add_message(f"Error al procesar el diagnóstico: {str(e)}", False, self.chat_app.get_current_theme())
             self.pop_context()
     
     def format_diagnostico(self, diagnostico):
@@ -117,7 +177,6 @@ class MedicoReglasContext(ChatContext):
                 return "\n".join(lines)
             elif isinstance(diagnostico, str):
                 # Si es una cadena, buscar patrones específicos para dividir
-                # Solo dividir en puntos seguidos de espacio o al final de la cadena
                 lines = []
                 current_line = ""
                 
@@ -146,17 +205,7 @@ class MedicoReglasContext(ChatContext):
             import traceback
             print(f"DEBUG -> Traceback: {traceback.format_exc()}")
             return str(diagnostico)
-
-    def generar_diagnostico(self, respuestas):
-        """Genera un diagnóstico para médicos."""
-        fiebre, tos_persistente, dificultad_respirar = respuestas
-        if dificultad_respirar in ["sí", "si"]:
-            return "Posible neumonía o enfermedad respiratoria grave - Derivar a especialista"
-        elif fiebre in ["sí", "si"] and tos_persistente in ["sí", "si"]:
-            return "Posible bronquitis o infección respiratoria"
-        else:
-            return "Síntomas leves, recomendar reposo y observación"
-
+        
 class MedicoSeguimientoContext(ChatContext):
     def show_welcome_message(self):
         try:
