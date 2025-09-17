@@ -1,3 +1,4 @@
+from typing import Optional, Dict, Any
 from logic.requets_Methods import HTTPClient
 
 client = HTTPClient()
@@ -41,3 +42,26 @@ async def send_data_fetch(data: dict):
     except Exception as e:
         return {"message": f"Error: {str(e)}"}
 
+
+async def fetch_historial_data(identificacion: Optional[int] = None, last: Optional[bool] = None) -> Dict[str, Any]:
+    url = f"http://localhost:3000/historial/get"
+    
+    # Construir parámetros según si hay identificación o no
+    params = {}
+    if identificacion:
+        params["identificacion"] = identificacion
+    if last:
+        params["last"] = "last"
+    try:
+        # Usar la clase HTTPClient en lugar de client directamente
+        response = await HTTPClient.get(url, params=params)
+        
+        if response and response.status_code == 200:
+            return response.json()
+        else:
+            return {
+                "message": f"Error en la petición: {response.status_code if response else 'No response'}"
+            }
+            
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}

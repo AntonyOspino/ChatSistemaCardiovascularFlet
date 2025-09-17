@@ -1,5 +1,5 @@
 import asyncio
-from logic.request_Functions import send_data, fetch_questions
+from logic.request_Functions import send_data, fetch_questions, fetch_historial_data
 from chat_context import ChatContext
 
 class PacienteMainMenuContext(ChatContext):
@@ -29,7 +29,7 @@ class PacienteMainMenuContext(ChatContext):
                 print("DEBUG -> Intentando cambiar a PacienteReglasContext")
                 await self.push_context(PacienteReglasContext)
             case "2" | "indicar progreso" | "progreso" | "historial":
-                await self.push_context(PacienteProgresoContext)
+                await self.push_context(PacienteProgresoHistorialContext)
             case "3" | "salir":
                 try:
                     self.chat_app.chat_area.add_message(f"Gracias por usar nuestros servicios {self.chat_app.current_user['nombre']}", False, self.chat_app.get_current_theme())
@@ -241,6 +241,43 @@ class PacienteReglasContext(ChatContext):
             return "Posible problema de presión arterial o deshidratación - Beba agua y consulte si persiste"
         else:
             return "Síntomas leves, recomiendo reposo y observación"
+        
+class PacienteProgresoHistorialContext(ChatContext):
+    async def show_welcome_message(self):
+        try:
+            self.chat_app.chat_area.add_message("Seleccione una opción:\n1) Indicar progreso\n2) Ver historial de diagnósticos\n3) Volver al menú previo", False, self.chat_app.get_current_theme())
+            print("DEBUG -> Mensaje de bienvenida mostrado en PacienteProgresoHistorialContext")
+        except Exception as e:
+            print(f"ERROR -> Error al mostrar mensaje de bienvenida en PacienteProgresoHistorialContext: {str(e)}")
+            import traceback
+            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+
+    async def handle_message(self, message):
+        message = message.strip()
+        if not message:
+            try:
+                self.chat_app.chat_area.add_message("No puede dejar campos vacíos. Elige una opción.", False, self.chat_app.get_current_theme())
+            except Exception as e:
+                print(f"ERROR -> Error al mostrar mensaje de error en PacienteProgresoHistorialContext: {str(e)}")
+                import traceback
+                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            return
+        match message.lower():
+            case "1" | "indicar progreso" | "progreso":
+                await self.push_context(PacienteProgresoContext)
+            case "2" | "ver historial" | "historial":
+                await self.push_context(PacienteHistorialContext)
+            case "3" | "volver" | "menú":
+                self.pop_context()
+            case _:
+                try:
+                    self.chat_app.chat_area.add_message("Opción no válida. Elige:\n1) Indicar progreso\n2) Ver historial de diagnósticos\n3) Volver al menú previo", False, self.chat_app.get_current_theme())
+                except Exception as e:
+                    print(f"ERROR -> Error al mostrar mensaje de opción no válida en PacienteProgresoHistorialContext: {str(e)}")
+                    import traceback
+                    print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                    self.chat_app.chat_area.add_message("Ocurrió un error al procesar su solicitud.", False, self.chat_app.get_current_theme())
+
 
 class PacienteProgresoContext(ChatContext):
     def show_welcome_message(self):
@@ -270,3 +307,128 @@ class PacienteProgresoContext(ChatContext):
             import traceback
             print(f"DEBUG -> Traceback: {traceback.format_exc()}")
         self.pop_context()
+
+class PacienteHistorialContext(ChatContext):
+    def show_welcome_message(self):
+        try:
+            self.chat_app.chat_area.add_message("Seleccione una opción:\n1) Ver historial de diagnósticos\n2) Ver ultimo registro de diagnostico\n3) Volver al menú previo", False, self.chat_app.get_current_theme())
+            print("DEBUG -> Mensaje de bienvenida mostrado en PacienteHistorialContext")
+        except Exception as e:
+            print(f"ERROR -> Error al mostrar mensaje de bienvenida en PacienteHistorialContext: {str(e)}")
+            import traceback
+            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+    
+    async def handle_message(self, message):
+        message = message.strip()
+        if not message:
+            try:
+                self.chat_app.chat_area.add_message("No puede dejar campos vacíos. Elige una opción.", False, self.chat_app.get_current_theme())
+            except Exception as e:
+                print(f"ERROR -> Error al mostrar mensaje de error en PacienteHistorialContext: {str(e)}")
+                import traceback
+                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            return
+        match message.lower():
+            case "1" | "ver historial" | "historial":
+                try:
+                    self.chat_app.chat_area.add_message("Mostrando historial de diagnósticos...", False, self.chat_app.get_current_theme())
+                    print("DEBUG -> Mensaje de historial mostrado")
+                    historial = await fetch_historial_data(self.chat_app.current_user.get("identificacion"))
+                    print(f"DEBUG -> Respuesta de fetch_historial_data: {repr(historial)}")
+                    if historial and isinstance(historial, dict) and "data" in historial:
+                        historial_data = historial.get("data", [])
+                        if historial_data:
+                            for entry in historial_data:
+                                fecha = entry.get("fecha", "Desconocida")
+                                diagnostico = entry.get("diagnostico", "No disponible")
+                                preguntas_respuestas = entry.get("preguntas_respuestas", [])
+                                formatted_preguntas_respuestas = "\n".join([f"{item['pregunta']}: {'Sí' if item['respuesta'] == 1 else 'No' if item['respuesta'] == 0 else 'Desconocido'}" for item in preguntas_respuestas]) if preguntas_respuestas else "No disponible"
+                                formatted_diagnostico = self.format_diagnostico(diagnostico)
+                                self.chat_app.chat_area.add_message(f"Fecha: {fecha}\nDiagnóstico:\n{formatted_diagnostico}\nPreguntas y Respuestas:\n{formatted_preguntas_respuestas}", False, self.chat_app.get_current_theme())
+                        else:
+                            self.chat_app.chat_area.add_message("No se encontraron registros en el historial.", False, self.chat_app.get_current_theme())
+                    else:
+                        error_msg = historial.get("message", "Error al obtener el historial.") if isinstance(historial, dict) else "Error desconocido al obtener el historial."
+                        self.chat_app.chat_area.add_message(error_msg, False, self.chat_app.get_current_theme())
+                except Exception as e:
+                    print(f"ERROR -> Error al obtener o mostrar historial en PacienteHistorialContext: {str(e)}")
+                    import traceback
+                    print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                    try:
+                        self.chat_app.chat_area.add_message(f"Error al obtener el historial: {str(e)}", False, self.chat_app.get_current_theme())
+                    except Exception as e:
+                        print(f"ERROR -> Error al mostrar mensaje de error en PacienteHistorialContext: {str(e)}")
+                        import traceback
+                        print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                self.pop_context()
+            case "2" | "ver ultimo" | "ultimo":
+                try:
+                    self.chat_app.chat_area.add_message("Mostrando último registro de diagnóstico...", False, self.chat_app.get_current_theme())
+                    print("DEBUG -> Mensaje de último registro mostrado")
+                    ultimo = await fetch_historial_data(self.chat_app.current_user.get("identificacion"), last=True)
+                    print(f"DEBUG -> Respuesta de fetch_historial_data (último): {repr(ultimo)}")
+                    if ultimo and isinstance(ultimo, dict) and "data" in ultimo:
+                        ultimo_data = ultimo.get("data", [])
+                        if ultimo_data:
+                            entry = ultimo_data[0]
+                            fecha = entry.get("fecha", "Desconocida")
+                            diagnostico = entry.get("diagnostico", "No disponible")
+                            preguntas_respuestas = entry.get("preguntas_respuestas", [])
+                            formatted_preguntas_respuestas = "\n".join([f"{item['pregunta']}: {'Sí' if item['respuesta'] == 1 else 'No' if item['respuesta'] == 0 else 'Desconocido'}" for item in preguntas_respuestas]) if preguntas_respuestas else "No disponible"
+                            formatted_diagnostico = self.format_diagnostico(diagnostico)
+                            self.chat_app.chat_area.add_message(f"Fecha: {fecha}\nDiagnóstico:\n{formatted_diagnostico}\nPreguntas y Respuestas:\n{formatted_preguntas_respuestas}", False, self.chat_app.get_current_theme())
+                        else:
+                            self.chat_app.chat_area.add_message("No se encontró ningún registro en el historial.", False, self.chat_app.get_current_theme())
+                    else:
+                        error_msg = ultimo.get("message", "Error al obtener el último registro.") if isinstance(ultimo, dict) else "Error desconocido al obtener el último registro."
+                        self.chat_app.chat_area.add_message(error_msg, False, self.chat_app.get_current_theme())
+                except Exception as e:
+                    print(f"ERROR -> Error al obtener o mostrar último registro en PacienteHistorialContext: {str(e)}")
+                    import traceback
+                    print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                    try:
+                        self.chat_app.chat_area.add_message(f"Error al obtener el último registro: {str(e)}", False, self.chat_app.get_current_theme())
+                    except Exception as e:
+                        print(f"ERROR -> Error al mostrar mensaje de error en PacienteHistorialContext: {str(e)}")
+                        import traceback
+                        print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                self.pop_context()
+            case "3" | "volver" | "menú":
+                self.pop_context()
+            case _:
+                try:
+                    self.chat_app.chat_area.add_message("Opción no válida. Elige:\n1) Ver historial de diagnósticos\n2) Ver último registro de diagnóstico\n3) Volver al menú previo", False, self.chat_app.get_current_theme())
+                except Exception as e:
+                    print(f"ERROR -> Error al mostrar mensaje de opción no válida en PacienteHistorialContext: {str(e)}")
+                    import traceback
+                    print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+                    self.chat_app.chat_area.add_message("Error al mostrar mensaje de opción no válida.", False, self.chat_app.get_current_theme())
+
+    def format_diagnostico(self, diagnostico):
+        """Formatea el diagnóstico con saltos de línea para mejor legibilidad."""
+        try:
+            if isinstance(diagnostico, dict):
+                # Si es un diccionario, concatenar los valores con saltos de línea
+                lines = []
+                for key, value in diagnostico.items():
+                    if isinstance(value, str):
+                        lines.append(f"{key.capitalize()}: {value}")
+                    else:
+                        lines.append(f"{key.capitalize()}: {str(value)}")
+                return "\n".join(lines)
+            elif isinstance(diagnostico, str):
+                # Si es una cadena, reemplazar ciertos caracteres con saltos de línea
+                diagnostico_formatted = diagnostico.replace(";", "\n").replace(".", "\n").replace("-", "\n").replace(" ", "\n").replace(",", "\n")
+                # Elimina espacios en blanco adicionales y líneas vacías consecutivas
+                lines = [line.strip() for line in diagnostico_formatted.split("\n") if line.strip()]
+                return "\n".join(lines)
+            else:
+                # Si no es ni dict ni str, devolver como string
+                return str(diagnostico)
+        except Exception as e:
+            print(f"ERROR -> Error al formatear diagnóstico: {str(e)}")
+            import traceback
+            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            return str(diagnostico)
+
+
