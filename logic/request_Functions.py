@@ -21,6 +21,15 @@ async def send_data(data: dict):
             return response.json()
     except Exception as e:
         return {"message": f"Error: {str(e)}"}
+    
+async def send_data_progress(data: dict):
+    url = f"{API_BASE_URL}/respuesta/addProgress"
+    try:
+        response = await client.post(url, json=data)
+        if response and response.status_code == 201:
+            return response.json()
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
 
 
 async def fetch_questions():
@@ -63,5 +72,25 @@ async def fetch_historial_data(identificacion: Optional[int] = None, last: Optio
                 "message": f"Error en la petición: {response.status_code if response else 'No response'}"
             }
             
+    except Exception as e:
+        return {"message": f"Error: {str(e)}"}
+    
+
+async def fetch_pacients_progress(identificacion: int, progreso: bool = True, last: Optional[bool] = None) -> Dict[str, Any]:
+    base_url = "http://localhost:3000/historial/get"
+    if progreso:
+        url = f"{base_url}/{identificacion}/progreso"
+    elif last and progreso:
+        url = f"{base_url}/{identificacion}/progreso/last"
+    else:
+        url = f"{base_url}/{identificacion}"
+    try:
+        response = await HTTPClient.get(url)
+        if response and response.status_code == 200:
+            return response.json()
+        else:
+            return {
+                "message": f"Error en la petición: {response.status_code if response else 'No response'}"
+            }
     except Exception as e:
         return {"message": f"Error: {str(e)}"}

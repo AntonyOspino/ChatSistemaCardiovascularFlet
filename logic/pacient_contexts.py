@@ -1,5 +1,5 @@
 import asyncio
-from logic.request_Functions import send_data, fetch_questions, fetch_historial_data
+from logic.request_Functions import send_data, fetch_questions, fetch_historial_data, send_data_progress
 from chat_context import ChatContext
 
 class PacienteMainMenuContext(ChatContext):
@@ -300,6 +300,12 @@ class PacienteProgresoContext(ChatContext):
             return
             
         try:
+            progress_message = await send_data_progress({"identificacion": self.chat_app.current_user["identificacion"], "descripcion": message})
+            print(f"DEBUG -> Respuesta de fetch_historial_data en progreso: {repr(progress_message)}")
+            if progress_message and "message" in progress_message:
+                self.chat_app.chat_area.add_message(f"{progress_message['message']}", False, self.chat_app.get_current_theme())
+            else:
+                self.chat_app.chat_area.add_message("Progreso registrado, pero no se recibió confirmación clara.", False, self.chat_app.get_current_theme())
             self.chat_app.chat_area.add_message("Progreso registrado en el historial.", False, self.chat_app.get_current_theme())
             print("DEBUG -> Mensaje de progreso registrado mostrado")
         except Exception as e:

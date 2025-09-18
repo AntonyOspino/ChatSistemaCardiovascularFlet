@@ -1,5 +1,6 @@
 import asyncio
-from logic.request_Functions import fetch_questions, send_data_fetch
+from logic.request_Functions import fetch_questions, send_data_fetch, fetch_pacients_progress
+from logic.nlp_processing import procesar_historial
 from chat_context import ChatContext
 
 class MedicoMainMenuContext(ChatContext):
@@ -229,38 +230,41 @@ class MedicoSeguimientoContext(ChatContext):
         try:
             self.chat_app.chat_area.add_message(f"Buscando historial del paciente con cédula: {message}", False, self.chat_app.get_current_theme())
             print("DEBUG -> Mensaje de búsqueda de historial mostrado")
-        except Exception as e:
-            print(f"ERROR -> Error al mostrar mensaje de búsqueda en MedicoSeguimientoContext: {str(e)}")
-            import traceback
-            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
-            return
-            
-        await asyncio.sleep(1)
-        
-        historial = [
-            "Consulta 01/09/2025: Paciente con fiebre y tos - Diagnóstico: Gripe común",
-            "Progreso 05/09/2025: Me siento mejor, pero aún con algo de tos",
-            "Consulta 10/09/2025: Síntomas mejorados, recomendar reposo adicional"
-        ]
-        
-        for item in historial:
-            try:
-                self.chat_app.chat_area.add_message(f"• {item}", False, self.chat_app.get_current_theme())
-                print(f"DEBUG -> Elemento de historial mostrado: {item}")
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                print(f"ERROR -> Error al mostrar elemento de historial: {str(e)}")
-                import traceback
-                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            historial_progreso = await fetch_pacients_progress(identificacion=int(message), progreso=True)
+            historial_data = historial_progreso["data"][0]
+            progreso = historial_data.get("progreso")  # Usar get para evitar KeyError
+            print(f"DEBUG -> Historial de progreso obtenido: {repr(progreso)}")
+            if not progreso or not isinstance(progreso, list):
+                self.pop_context()
+                self.chat_app.chat_area.add_message("No se encontraron entradas de progreso en el historial.", False, self.chat_app.get_current_theme())
                 return
-        
-        try:
+
+            # Procesar y mostrar cada entrada del historial
+            for i, entry in enumerate(progreso, 1):
+                texto_original = entry.get("progreso", "No hay texto disponible")
+                fecha = entry.get("fecha")  # Obtener la fecha del historial
+                processed = await procesar_historial(texto_original, fecha=fecha)
+                mensaje = f"""
+                📅 Entrada #{i} - {processed['fecha'] if processed['fecha'] else 'Sin fecha'}
+                📝 Original: {processed['original']}
+                🔍 Resumen: {processed['resumen']}
+                😊 Sentimiento: {processed['sentimiento']}
+                🌐 Traducción: {processed['traduccion']}
+                🏷️ Palabras clave: {', '.join(processed['palabras_clave']) if processed['palabras_clave'] else 'Ninguna'}
+
+                """.strip()
+
+                self.chat_app.chat_area.add_message(mensaje, False, self.chat_app.get_current_theme())
+                await asyncio.sleep(1)
+
             self.chat_app.chat_area.add_message("Fin del historial.", False, self.chat_app.get_current_theme())
             print("DEBUG -> Mensaje de fin de historial mostrado")
         except Exception as e:
-            print(f"ERROR -> Error al mostrar mensaje de fin de historial: {str(e)}")
+            print(f"ERROR -> Error al procesar el historial: {str(e)}")
             import traceback
             print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            self.chat_app.chat_area.add_message(f"Error al procesar el historial: {str(e)}", False, self.chat_app.get_current_theme())            
+        await asyncio.sleep(1)
         self.pop_context()
 
 class MedicoReporteContext(ChatContext):
