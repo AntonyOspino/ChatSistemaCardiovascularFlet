@@ -42,8 +42,8 @@ class ChatArea:
         """Establece la referencia a la página de Flet para actualizaciones."""
         self.page = page
 
-    def add_message(self, message: str, is_user: bool, theme):
-        """Añade un mensaje al ListView con color según el emisor."""
+    """def add_message(self, message: str, is_user: bool, theme):
+        Añade un mensaje al ListView con color según el emisor.
         try:
             print(f"DEBUG -> Agregando mensaje: {message}, is_user: {is_user}")
             bubble_color = theme["primary"] if is_user else theme["secondary"]
@@ -64,7 +64,8 @@ class ChatArea:
                 border_radius=10,
                 alignment=alignment,
                 margin=margin.symmetric(vertical=5),
-                width=BoxConstraints(max_width=400)
+                expand=False,
+                width=400
             )
 
 
@@ -84,6 +85,52 @@ class ChatArea:
             import traceback
             print(f"DEBUG -> Traceback: {traceback.format_exc()}")
             raise
+        """
+
+    def add_message(self, message: str, is_user: bool, theme, msg_type="normal"):
+        """Añade un mensaje al ListView con estilos según emisor y tipo."""
+        # Definir colores según tipo de mensaje
+        if msg_type == "error":
+            bubble_color = "red"
+            text_color = "white"
+        elif is_user:
+            bubble_color = theme["primary"]   # color usuario
+            text_color = "white"
+        else:
+            bubble_color = theme["secondary"]  # color chatbot
+            text_color = theme["text"]
+
+        alignment = ft.alignment.center_right if is_user else ft.alignment.center_left
+
+        # 🔹 Ancho dinámico: 60% del ancho de la ventana
+        max_width = int(self.page.window_width * 0.6) if self.page and self.page.window_width else 600
+
+        message_container = ft.Container(
+            content=ft.Text(
+                value=message,
+                color=text_color,
+                size=14,
+                font_family="Verdana",
+                no_wrap=False,
+                max_lines=None,
+                overflow=ft.TextOverflow.CLIP
+            ),
+            padding=ft.padding.symmetric(horizontal=15, vertical=10),
+            bgcolor=bubble_color,
+            border_radius=15,
+            alignment=alignment,
+            margin=ft.margin.symmetric(vertical=5),
+            width=max_width  # 👈 Aquí se aplica el ancho dinámico
+        )
+
+        message_row = ft.Row(
+            controls=[message_container],
+            alignment=ft.MainAxisAlignment.END if is_user else ft.MainAxisAlignment.START
+        )
+
+        self.messages.controls.append(message_row)
+        self.scroll_to_bottom()
+        
 
     def clear_input(self):
         """Limpia el campo de entrada."""
