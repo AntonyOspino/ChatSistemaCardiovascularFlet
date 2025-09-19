@@ -33,6 +33,19 @@ async def main(page: Page):
     page.add(carga)
     page.update()
 
+    async def __preload_models():
+        try:
+            print("DEBUG -> Iniciando precarga NLP en background...")
+            from logic import nlp_processing
+            resultado = await nlp_processing.load_nlp_model()
+            print(f"DEBUG -> Precarga NLP finalizada: {resultado}")
+        except Exception as e:
+            print("ERROR -> precarga NLP:", e)
+
+    # lanzar la precarga justo antes de la animación (esto NO bloquea)
+    asyncio.create_task(__preload_models())
+
+
     # Animación de carga progresiva (exactos 3.0s)
     for i in range(61):  # 0 a 60 → 61 pasos
         progress.value = i / 60  # de 0.0 a 1.0
@@ -47,5 +60,8 @@ async def main(page: Page):
 
     # Iniciar la app
     app = ChatApp(page, is_light_theme)
+
+    
+    
 
 ft.app(target=main)

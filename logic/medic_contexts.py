@@ -1,6 +1,6 @@
 import asyncio
 from logic.request_Functions import fetch_questions, send_data_fetch, fetch_pacients_progress
-from logic.nlp_processing import procesar_historial
+from logic.nlp_processing import procesar_historial, load_nlp_model, get_nlp_model
 from chat_context import ChatContext
 from reporting import generar_pdf_paciente, enviar_pdfs  # importa tus funciones reales
 
@@ -26,6 +26,17 @@ class MedicoMainMenuContext(ChatContext):
                 import traceback
                 print(f"DEBUG -> Traceback: {traceback.format_exc()}")
             return
+        
+        nlp_refs = get_nlp_model()
+        if not nlp_refs or (nlp_refs.get("spacy") is None and nlp_refs.get("translator") is None and nlp_refs.get("sentiment") is None):
+            # informar y pedir reintento más amigable
+            self.chat_app.chat_area.add_message(
+                "⏳ El módulo de análisis todavía se está cargando. Por favor espera unos segundos e inténtalo de nuevo.",
+                False,
+                self.chat_app.get_current_theme()
+            )
+            return
+        
             
         match message.lower():
             case "1" | "sistema de reglas" | "reglas":

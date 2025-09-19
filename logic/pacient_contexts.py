@@ -1,6 +1,7 @@
 import asyncio
 from logic.request_Functions import send_data, fetch_questions, fetch_historial_data, send_data_progress
 from chat_context import ChatContext
+from logic.nlp_processing import get_nlp_model, load_nlp_model
 
 class PacienteMainMenuContext(ChatContext):
     def show_welcome_message(self):
@@ -23,6 +24,17 @@ class PacienteMainMenuContext(ChatContext):
                 import traceback
                 print(f"DEBUG -> Traceback: {traceback.format_exc()}")
             return
+
+        nlp_refs = get_nlp_model()
+        if nlp_refs is None or nlp_refs.get("spacy") is None:
+            # sólo notificar; no recargar
+            self.chat_app.chat_area.add_message("⏳ El módulo de análisis aún se está cargando en el inicio. Por favor espera unos segundos e inténtalo de nuevo.", False, self.chat_app.get_current_theme())
+            return
+
+        # usar spacy directamente
+        doc = nlp_refs["spacy"](message)
+        sintomas = [token.text for token in doc if token.pos_ in ["NOUN", "ADJ"]]
+        
             
         match message.lower():
             case "1" | "sistema de reglas" | "reglas":
