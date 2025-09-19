@@ -177,17 +177,44 @@ def enviar_pdfs(destinatario, remitente, clave, archivos_pdf):
     # Cuerpo en HTML
     cuerpo_html = """
     <html>
-        <body style="font-family: Arial, sans-serif; color: #333;">
-            <p>Hola 👋,</p>
-            <p>Te envío los <b>reportes médicos de los pacientes</b> generados recientemente.</p>
-            <ul>
-                <li>Todos los reportes están en formato PDF 📄.</li>
-                <li>Revisa cada documento para ver detalles de diagnósticos y recomendaciones.</li>
-            </ul>
-            <p>Si tienes alguna duda, no dudes en responder a este correo.</p>
-            <p style="color: #555;">Saludos cordiales,<br>El equipo de salud</p>
+        <body style="margin:0; padding:0; background-color:#f4f6f9; font-family: 'Segoe UI', Arial, sans-serif; color:#333;">
+            <div style="max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); overflow:hidden;">
+            
+            <!-- Encabezado -->
+            <div style="background:#4a90e2; padding:20px; text-align:center; color:white;">
+                <h2 style="margin:0; font-size:24px;">📩 Reportes Médicos</h2>
+            </div>
+            
+            <!-- Contenido -->
+            <div style="padding:30px;">
+                <p style="font-size:16px;">Hola 👋,</p>
+                <p style="font-size:16px; line-height:1.6;">
+                Te envío los <b>reportes médicos de los pacientes</b> generados recientemente. 
+                Cada documento contiene información detallada sobre <span style="color:#4a90e2;">diagnósticos</span> y <span style="color:#4a90e2;">recomendaciones</span>.
+                </p>
+
+                <div style="background:#f9f9f9; padding:15px 20px; border-left:5px solid #4a90e2; margin:20px 0; border-radius:6px;">
+                <ul style="margin:0; padding-left:20px; font-size:15px;">
+                    <li>📄 Todos los reportes están en formato PDF.</li>
+                    <li>✅ Cada documento está actualizado y listo para revisión.</li>
+                    <li>🕒 Generados automáticamente en el sistema.</li>
+                </ul>
+                </div>
+
+                <p style="font-size:15px; margin-top:20px; line-height:1.6;">
+                Si tienes alguna duda, no dudes en responder a este correo.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background:#f0f2f5; padding:15px; text-align:center; font-size:13px; color:#666;">
+                <p style="margin:5px 0;">Saludos cordiales,<br><b>Equipo de Salud</b></p>
+                <p style="margin:5px 0;">Este es un mensaje automático, por favor no responder directamente.</p>
+            </div>
+            </div>
         </body>
     </html>
+
     """
 
     # Usamos MIMEText con "html"
