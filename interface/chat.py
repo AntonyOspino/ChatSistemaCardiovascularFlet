@@ -1,3 +1,4 @@
+import asyncio
 import flet as ft
 from flet import Page, MainAxisAlignment, CrossAxisAlignment, Icons
 from interface.chat_area import ChatArea
@@ -122,20 +123,40 @@ class ChatApp:
             self.context = InitialContext(self)
             self.context.show_welcome_message()
 
+    
     async def send_message(self, e):
         """Envía el mensaje del usuario y procesa la respuesta del contexto."""
-        message = self.chat_area.input_field.value.strip().lower()
-        if not message:
+        # Leer el texto tal y como lo escribió el usuario (sin modificar)
+        raw = self.chat_area.input_field.value or ""
+        message_raw = raw.strip()
+
+        # Validación: si está vacío, mostrar burbuja de error y no avanzar
+        if not message_raw:
+            self.chat_area.add_message(
+                "No puede dejar campos vacíos. Por favor, responde la pregunta.",
+                False,
+                self.get_current_theme(),
+                msg_type="error"
+            )
+            self.chat_area.focus_input()
+            self.page.update()
             return
 
-        print(f"DEBUG -> Enviando mensaje: {message}, contexto actual: {self.context.__class__.__name__ if self.context else 'None'}")
-        # Añade el mensaje del usuario al área de chat
-        self.chat_area.add_message(message, True, self.get_current_theme())
-        self.chat_area.clear_input()
+        # Mostrar el mensaje del usuario (usar el texto original para mejor UX)
+        self.chat_area.add_message(message_raw, True, self.get_current_theme())
+        # Guardar una versión normalizada para procesar (ej.: lower para matching)
+        message = message_raw.lower()
+
+        # Limpiar input y preparar UI
+        try:
+            self.chat_area.clear_input()
+        except Exception:
+            # Si clear_input falla, no queremos interrumpir el flujo principal
+            pass
         self.chat_area.scroll_to_bottom()
         self.chat_area.focus_input()
 
-        # Si el contexto no está inicializado, muestra error y reinicia
+        # Verificación de contexto
         if self.context is None:
             print("ERROR -> self.context es None")
             self.chat_area.add_message(
@@ -144,11 +165,18 @@ class ChatApp:
                 self.get_current_theme()
             )
             self.context = InitialContext(self)
-            self.context.show_welcome_message()
+            # show_welcome_message puede ser síncrono o asíncrono; aquí se asume síncrono
+            try:
+                if hasattr(self.context, "show_welcome_message") and asyncio.iscoroutinefunction(self.context.show_welcome_message):
+                    await self.context.show_welcome_message()
+                else:
+                    self.context.show_welcome_message()
+            except Exception as ex:
+                print(f"ERROR -> al mostrar bienvenida tras reiniciar contexto: {ex}")
             self.page.update()
             return
 
-        # Procesa el mensaje en el contexto actual
+        # Procesar el mensaje en el contexto actual (asíncrono)
         try:
             await self.context.handle_message(message)
         except Exception as ex:
@@ -160,6 +188,7 @@ class ChatApp:
             )
 
         self.page.update()
+
 
     async def handle_keyboard_event(self, e):
         """Maneja eventos de teclado (Enter para enviar, Escape para cerrar)."""
@@ -200,3 +229,5 @@ class ChatApp:
     def get_current_theme(self):
         """Devuelve el diccionario de colores del tema actual."""
         return self.LIGHT_THEME if self.is_light_theme else self.DARK_THEME
+    
+    

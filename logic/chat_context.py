@@ -130,7 +130,7 @@ class InitialContext(ChatContext):
                     print(f"DEBUG -> Traceback: {traceback.format_exc()}")
         else:
             try:
-                self.chat_app.chat_area.add_message("Formato incorrecto. Debe ser: usuario contraseña", False, self.chat_app.get_current_theme())
+                self.chat_app.chat_area.add_message("Formato incorrecto ❌. Por favor escribe: usuario contraseña (ejemplo: pperes 123456789).", False, self.chat_app.get_current_theme())
             except Exception as e:
                 print(f"ERROR -> Error al mostrar mensaje de formato incorrecto: {str(e)}")
                 import traceback
