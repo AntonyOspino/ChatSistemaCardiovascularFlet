@@ -1,3 +1,4 @@
+import tempfile
 import httpx
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.pagesizes import letter
@@ -9,6 +10,8 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+
+import os
 
 
 # ================= Estilos =================
@@ -82,7 +85,12 @@ def generar_pdf_paciente(cedula):
     diagnosticos = obtener_diagnosticos_usuario(cedula)
     progreso = obtener_progreso_usuario(cedula)
 
-    ruta_archivo = f"reporte_{cedula}.pdf"
+    # Nombre bonito para el PDF
+    nombre_pdf = f"reporte_{cedula}.pdf"
+
+    # Ruta en la carpeta temporal del sistema
+    ruta_archivo = os.path.join(tempfile.gettempdir(), nombre_pdf)
+
     doc = SimpleDocTemplate(ruta_archivo, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
     elementos = []
 
@@ -166,20 +174,58 @@ def enviar_pdfs(destinatario, remitente, clave, archivos_pdf):
     msg["To"] = destinatario
     msg["Subject"] = "📩 Reportes Médicos de Pacientes"
 
-    cuerpo = "Hola,\n\nAdjunto encontrarás los reportes médicos generados.\n\nSaludos."
-    msg.attach(MIMEText(cuerpo, "plain"))
+    # Cuerpo en HTML
+    cuerpo_html = """
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+            <p>Hola 👋,</p>
+            <p>Te envío los <b>reportes médicos de los pacientes</b> generados recientemente.</p>
+            <ul>
+                <li>Todos los reportes están en formato PDF 📄.</li>
+                <li>Revisa cada documento para ver detalles de diagnósticos y recomendaciones.</li>
+            </ul>
+            <p>Si tienes alguna duda, no dudes en responder a este correo.</p>
+            <p style="color: #555;">Saludos cordiales,<br>El equipo de salud</p>
+        </body>
+    </html>
+    """
+
+    # Usamos MIMEText con "html"
+    msg.attach(MIMEText(cuerpo_html, "html"))
 
     # Adjuntar cada PDF
-    for archivo in archivos_pdf:
+    """for archivo in archivos_pdf:
         with open(archivo, "rb") as f:
             adjunto = MIMEApplication(f.read(), Name=archivo)
             adjunto["Content-Disposition"] = f'attachment; filename="{archivo}"'
             msg.attach(adjunto)
 
+    with open(ruta_archivo, "rb") as f:
+    nombre_pdf = os.path.basename(ruta_archivo)  # → "reporte_12345.pdf"
+    adjunto = MIMEApplication(f.read(), Name=nombre_pdf)
+    adjunto["Content-Disposition"] = f'attachment; filename="{nombre_pdf}"'
+    msg.attach(adjunto)"""
+
+    # Adjuntar cada PDF con nombre limpio
+    for archivo in archivos_pdf:
+        with open(archivo, "rb") as f:
+            nombre_pdf = os.path.basename(archivo)  # solo "reporte_12345.pdf"
+            adjunto = MIMEApplication(f.read(), Name=nombre_pdf)
+            adjunto["Content-Disposition"] = f'attachment; filename="{nombre_pdf}"'
+            msg.attach(adjunto)
+
+
+    # Enviar correo
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
         server.starttls()
         server.login(remitente, clave)  # contraseña de aplicación
         server.send_message(msg)
 
     print(f"✅ Correo enviado a {destinatario} con {len(archivos_pdf)} PDF(s).")
+
+    # ... después de enviar el correo lo eliminados del temp
+    for archivo in archivos_pdf:
+        if os.path.exists(archivo):
+            os.remove(archivo)
+        print(f"Archivo temporal eliminado: {archivo}")
 
