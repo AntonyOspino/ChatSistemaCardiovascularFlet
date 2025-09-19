@@ -126,12 +126,15 @@ class ChatApp:
     
     async def send_message(self, e):
         """Envía el mensaje del usuario y procesa la respuesta del contexto."""
+        import re  # asegurarse de tenerlo para normalizar el input
+
         # Leer el texto tal y como lo escribió el usuario (sin modificar)
         raw = self.chat_area.input_field.value or ""
-        message_raw = raw.strip()
+        # Normalizar: reemplaza saltos de línea, tabs y múltiples espacios por uno solo y hace strip
+        message_normalizado = re.sub(r"\s+", " ", raw).strip()
 
         # Validación: si está vacío, mostrar burbuja de error y no avanzar
-        if not message_raw:
+        if not message_normalizado:
             self.chat_area.add_message(
                 "No puede dejar campos vacíos. Por favor, responde la pregunta.",
                 False,
@@ -142,10 +145,10 @@ class ChatApp:
             self.page.update()
             return
 
-        # Mostrar el mensaje del usuario (usar el texto original para mejor UX)
-        self.chat_area.add_message(message_raw, True, self.get_current_theme())
-        # Guardar una versión normalizada para procesar (ej.: lower para matching)
-        message = message_raw.lower()
+        # Mostrar el mensaje del usuario (usar texto normalizado para UX consistente)
+        self.chat_area.add_message(message_normalizado, True, self.get_current_theme())
+        # Guardar versión lower para procesamiento
+        message = message_normalizado.lower()
 
         # Limpiar input y preparar UI
         try:
@@ -193,10 +196,19 @@ class ChatApp:
     async def handle_keyboard_event(self, e):
         """Maneja eventos de teclado (Enter para enviar, Escape para cerrar)."""
         print(f"DEBUG -> Evento de teclado: {e.key}, contexto actual: {self.context.__class__.__name__ if self.context else 'None'}")
-        if e.key == "Enter" and not e.shift:
-            await self.send_message(e)
+
+        if e.key == "Enter":
+            e.prevent_default()  # <-- Evita que el Enter haga doble efecto (envío + salto de línea)
+            if not e.shift:
+                await self.send_message(e)
+            else:
+                # Shift+Enter: permite salto de línea sin enviar
+                self.chat_area.input_field.value += "\n"
+
         elif e.key == "Escape":
+            e.prevent_default()
             self.page.window.close()
+
         self.page.update()
 
     def apply_theme(self, is_light_theme: bool):
