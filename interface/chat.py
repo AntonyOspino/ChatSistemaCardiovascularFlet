@@ -123,9 +123,9 @@ class ChatApp:
             self.context = InitialContext(self)
             self.context.show_welcome_message()
 
-    
+    """"
     async def send_message(self, e):
-        """Envía el mensaje del usuario y procesa la respuesta del contexto."""
+        Envía el mensaje del usuario y procesa la respuesta del contexto.
         # Leer el texto tal y como lo escribió el usuario (sin modificar)
         raw = self.chat_area.input_field.value or ""
         message_raw = raw.strip()
@@ -188,15 +188,93 @@ class ChatApp:
             )
 
         self.page.update()
+    """
+
+    async def send_message(self, e):
+        """Envía el mensaje del usuario y procesa la respuesta del contexto."""
+        import re  # asegurarse de tenerlo para normalizar el input
+
+        # Leer el texto tal y como lo escribió el usuario (sin modificar)
+        raw = self.chat_area.input_field.value or ""
+        # Normalizar: reemplaza saltos de línea, tabs y múltiples espacios por uno solo y hace strip
+        message_normalizado = re.sub(r"\s+", " ", raw).strip()
+
+        # Validación: si está vacío, mostrar burbuja de error y no avanzar
+        if not message_normalizado:
+            self.chat_area.add_message(
+                "No puede dejar campos vacíos. Por favor, responde la pregunta.",
+                False,
+                self.get_current_theme(),
+                msg_type="error"
+            )
+            self.chat_area.focus_input()
+            self.page.update()
+            return
+
+        # Mostrar el mensaje del usuario (usar texto normalizado para UX consistente)
+        self.chat_area.add_message(message_normalizado, True, self.get_current_theme())
+        # Guardar versión lower para procesamiento
+        message = message_normalizado.lower()
+
+        # Limpiar input y preparar UI
+        try:
+            self.chat_area.clear_input()
+        except Exception:
+            # Si clear_input falla, no queremos interrumpir el flujo principal
+            pass
+        self.chat_area.scroll_to_bottom()
+        self.chat_area.focus_input()
+
+        # Verificación de contexto
+        if self.context is None:
+            print("ERROR -> self.context es None")
+            self.chat_area.add_message(
+                "Error: Contexto no inicializado. Por favor, reinicia la aplicación.",
+                False,
+                self.get_current_theme()
+            )
+            self.context = InitialContext(self)
+            # show_welcome_message puede ser síncrono o asíncrono; aquí se asume síncrono
+            try:
+                if hasattr(self.context, "show_welcome_message") and asyncio.iscoroutinefunction(self.context.show_welcome_message):
+                    await self.context.show_welcome_message()
+                else:
+                    self.context.show_welcome_message()
+            except Exception as ex:
+                print(f"ERROR -> al mostrar bienvenida tras reiniciar contexto: {ex}")
+            self.page.update()
+            return
+
+        # Procesar el mensaje en el contexto actual (asíncrono)
+        try:
+            await self.context.handle_message(message)
+        except Exception as ex:
+            print(f"ERROR -> Excepción en handle_message: {str(ex)}")
+            self.chat_area.add_message(
+                f"Error al procesar el mensaje: {str(ex)}",
+                False,
+                self.get_current_theme()
+            )
+
+        self.page.update()
 
 
     async def handle_keyboard_event(self, e):
         """Maneja eventos de teclado (Enter para enviar, Escape para cerrar)."""
         print(f"DEBUG -> Evento de teclado: {e.key}, contexto actual: {self.context.__class__.__name__ if self.context else 'None'}")
-        if e.key == "Enter" and not e.shift:
-            await self.send_message(e)
+
+        if e.key == "Enter":
+            e.prevent_default()  # <-- Evita que el Enter haga doble efecto (envío + salto de línea)
+            if not e.shift:
+                await self.send_message(e)
+            else:
+                # Shift+Enter: permite salto de línea sin enviar
+                self.chat_area.input_field.value += "\n"
+
         elif e.key == "Escape":
+            e.prevent_default()
             self.page.window.close()
+
         self.page.update()
 
     def apply_theme(self, is_light_theme: bool):
