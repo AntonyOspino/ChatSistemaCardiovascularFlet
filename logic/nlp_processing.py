@@ -3,17 +3,26 @@ import asyncio
 import nltk
 from textblob import TextBlob
 import re
-from textblob import download_corpora
-download_corpora.download_all()  # Esto descarga todos los recursos necesarios
+
+
+try:
+    from textblob import download_corpora
+    download_corpora.download_all()
+except Exception:
+    pass
+
 
 
 
 # Descargar recursos necesarios de NLTK
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('brown')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
+nltk.download('stopwords', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('brown', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
+nltk.download('wordnet', quiet=True)
+
+# ---- Stopwords global (para no recalcular en cada llamada) ----
+STOP_WORDS = set(nltk.corpus.stopwords.words('spanish'))
 
 # Si usas torch/transformers/spacy, importarlos dentro de la carga para evitar costosos imports en cada llamada.
 import torch
@@ -30,13 +39,15 @@ _translator = None
 _sentiment_analyzer = None
 
 # ----- funciones ligeras (siempre disponibles) -----
-def process_sentences(sentences, stop_words=set(nltk.corpus.stopwords.words('spanish'))):
+
+def process_sentences(sentences, stop_words=STOP_WORDS):
     summarized_sentences = []
     for sent in sentences:
         words = nltk.word_tokenize(sent.string)
         filtered_words = [word for word in words if word not in stop_words and word.isalnum()]
         summarized_sentences.append(' '.join(filtered_words))
     return summarized_sentences
+
 
 def resumir_texto(texto):
     blob = TextBlob(texto)
