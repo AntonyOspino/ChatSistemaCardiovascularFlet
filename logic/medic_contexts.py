@@ -2,6 +2,8 @@ import asyncio
 from logic.request_Functions import fetch_questions, send_data_fetch, fetch_pacients_progress
 from logic.nlp_processing import procesar_historial
 from chat_context import ChatContext
+from reporting import generar_pdf_paciente, enviar_pdfs  # importa tus funciones reales
+
 
 class MedicoMainMenuContext(ChatContext):
     def show_welcome_message(self):
@@ -267,43 +269,92 @@ class MedicoSeguimientoContext(ChatContext):
         await asyncio.sleep(1)
         self.pop_context()
 
+
+
 class MedicoReporteContext(ChatContext):
+    def __init__(self, chat_app):
+        super().__init__(chat_app)
+        self.estado = "esperando_paciente"
+        self.cedulas = []
+
     def show_welcome_message(self):
-        try:
-            self.chat_app.chat_area.add_message("Sistema de reportes. Ingresa el correo electrónico para enviar el reporte:", False, self.chat_app.get_current_theme())
-            print("DEBUG -> Mensaje de bienvenida mostrado en MedicoReporteContext")
-        except Exception as e:
-            print(f"ERROR -> Error al mostrar mensaje de bienvenida en MedicoReporteContext: {str(e)}")
-            import traceback
-            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+        self.chat_app.chat_area.add_message(
+            "Sistema de reportes.\nIngresa la cédula de paciente o cédulas separadas por coma:",
+            False,
+            self.chat_app.get_current_theme()
+        )
 
     async def handle_message(self, message):
         if not message.strip():
-            try:
-                self.chat_app.chat_area.add_message("No puede dejar campos vacíos. Ingresa el correo.", False, self.chat_app.get_current_theme())
-            except Exception as e:
-                print(f"ERROR -> Error al mostrar mensaje de error en MedicoReporteContext: {str(e)}")
-                import traceback
-                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+            self.chat_app.chat_area.add_message(
+                "⚠️ No puede dejar campos vacíos.",
+                False,
+                self.chat_app.get_current_theme()
+            )
             return
-            
-        if "@" not in message or "." not in message:
-            try:
-                self.chat_app.chat_area.add_message("Correo electrónico no válido. Intenta de nuevo.", False, self.chat_app.get_current_theme())
-            except Exception as e:
-                print(f"ERROR -> Error al mostrar mensaje de correo no válido: {str(e)}")
-                import traceback
-                print(f"DEBUG -> Traceback: {traceback.format_exc()}")
+
+        # Paso 1: ingresar cédulas
+        if self.estado == "esperando_paciente":
+            self.cedulas = [c.strip() for c in message.split(",") if c.strip().isdigit()]
+            if not self.cedulas:
+                self.chat_app.chat_area.add_message(
+                    "⚠️ Ingresa cédulas válidas (numéricas, separadas por coma).",
+                    False,
+                    self.chat_app.get_current_theme()
+                )
+                return
+
+            self.chat_app.chat_area.add_message(
+                "✅ Cédulas recibidas.\nAhora ingresa el correo electrónico de destino:",
+                False,
+                self.chat_app.get_current_theme()
+            )
+            self.estado = "esperando_correo"
             return
-            
-        try:
-            self.chat_app.chat_area.add_message(f"Generando reporte y enviando a: {message}", False, self.chat_app.get_current_theme())
-            print("DEBUG -> Mensaje de generación de reporte mostrado")
-            await asyncio.sleep(2)
-            self.chat_app.chat_area.add_message("Reporte enviado exitosamente. Revisa tu correo.", False, self.chat_app.get_current_theme())
-            print("DEBUG -> Mensaje de reporte enviado mostrado")
-        except Exception as e:
-            print(f"ERROR -> Error al mostrar mensajes de reporte: {str(e)}")
-            import traceback
-            print(f"DEBUG -> Traceback: {traceback.format_exc()}")
-        self.pop_context()
+
+        # Paso 2: ingresar correo
+        if self.estado == "esperando_correo":
+            if "@" not in message or "." not in message:
+                self.chat_app.chat_area.add_message(
+                    "⚠️ Correo electrónico no válido. Intenta de nuevo.",
+                    False,
+                    self.chat_app.get_current_theme()
+                )
+                return
+
+            correo_destino = message
+            try:
+                self.chat_app.chat_area.add_message(
+                    f"📄 Generando reporte(s) y enviando a {correo_destino}...",
+                    False,
+                    self.chat_app.get_current_theme()
+                )
+
+                archivos_pdf = []
+                # Generar un PDF por cada cédula ingresada
+                for cedula in self.cedulas:
+                    pdf_path = generar_pdf_paciente(cedula)
+                    archivos_pdf.append(pdf_path)
+
+                # Enviar PDF(s) al correo
+                remitente = "tonny1998frenesi@gmail.com"
+                clave = "pgfv hyzs fukn rrqe"  # clave de aplicación de Gmail
+                enviar_pdfs(correo_destino, remitente, clave, archivos_pdf)
+
+                await asyncio.sleep(2)
+                self.chat_app.chat_area.add_message(
+                    "✅ Reporte(s) enviado(s) exitosamente.",
+                    False,
+                    self.chat_app.get_current_theme()
+                )
+
+            except Exception as e:
+                self.chat_app.chat_area.add_message(
+                    f"❌ Error al enviar el reporte: {e}",
+                    False,
+                    self.chat_app.get_current_theme()
+                )
+
+            # Terminar contexto
+            self.pop_context()
+

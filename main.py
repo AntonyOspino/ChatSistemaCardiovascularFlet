@@ -13,8 +13,8 @@ async def main(page: Page):
     page.title = "Sistema Cardiovascular"
     page.vertical_alignment = MainAxisAlignment.START
     page.horizontal_alignment = CrossAxisAlignment.CENTER
-    page.window.width = 1000  # Ancho en píxeles
-    page.window.height = 650  # Alto en píxeles
+    page.window.width = 1000
+    page.window.height = 650
     page.window.center()
 
     # Pantalla de carga
@@ -28,21 +28,21 @@ async def main(page: Page):
         alignment=ft.alignment.center,
         expand=True,
         opacity=1.0,
-        animate_opacity=250  # Transición de opacidad en 250ms
+        animate_opacity=250
     )
     page.add(carga)
     page.update()
 
-    # Animación de carga progresiva
-    for i in range(0, 101, 5):  # Incrementa del 0% al 100% en pasos de 5
-        progress.value = i / 100
-        await asyncio.sleep(0.05)  # Pausa de 50ms por paso (total ~2.5s)
+    # Animación de carga progresiva (exactos 3.0s)
+    for i in range(61):  # 0 a 60 → 61 pasos
+        progress.value = i / 60  # de 0.0 a 1.0
         page.update()
+        await asyncio.sleep(0.05)  # 61 × 0.05s ≈ 3.0s
 
     # Transición suave al contenido principal
     carga.opacity = 0.0
     page.update()
-    await asyncio.sleep(0.25)  # Espera la transición de opacidad
+    await asyncio.sleep(0.25)
     page.controls.clear()
 
     # Iniciar la app
